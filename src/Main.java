@@ -21,5 +21,8 @@ public class Main {
             System.out.println("Произведение: " + product);
             System.out.println("Частное: " + quotient);
         }
+        System.out.println("Введите текст и нажмите <Enter>: ");
+        String text = new Scanner(System.in) .nextLine();
+        System.out.println("Длина текста: " + text.length());
     }
 }
