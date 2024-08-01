@@ -1,5 +1,28 @@
+import java.util.Scanner;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Случайное число от 0 до 1: " + Math.random());
+        // Получение первого числа
+        System.out.println("Введите число 1:");
+        int number1 = new Scanner(System.in) .nextInt();
+        // Получение второго числа
+        System.out.println("Введите число 2:");
+        int number2 = new Scanner(System.in) .nextInt();
+        // Вычисление сумы, разности, умножения и деления
+        int sum = number1 + number2;
+        int difference = number1 - number2;
+        int product = number1 * number2;
+        double quotient;
+         {
+            quotient = (double) number1 / number2;
+            // Отображение результатов
+            System.out.println("Сумма: " + sum);
+            System.out.println("Разность: " + difference);
+            System.out.println("Произведение: " + product);
+            System.out.println("Частное: " + quotient);
+        }
+        System.out.println("Введите текст и нажмите <Enter>: ");
+        String text = new Scanner(System.in) .nextLine();
+        System.out.println("Длина текста: " + text.length());
     }
 }
