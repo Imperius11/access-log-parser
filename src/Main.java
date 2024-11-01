@@ -1,64 +1,70 @@
-import java.io.File;
-import java.util.Scanner;
+import java.io.*;
 
-public class Main {
+// Класс собственного исключения
+class LineTooLongException extends RuntimeException {
+    public LineTooLongException(String message) {
+        super(message);
+    }
+}
+
+class FileLineReader {
     public static void main(String[] args) {
-        // Получение первого числа
-        System.out.println("Введите число 1:");
-        int number1 = new Scanner(System.in) .nextInt();
-        // Получение второго числа
-        System.out.println("Введите число 2:");
-        int number2 = new Scanner(System.in) .nextInt();
-        // Вычисление сумы, разности, умножения и деления
-        int sum = number1 + number2;
-        int difference = number1 - number2;
-        int product = number1 * number2;
-        double quotient;
-         {
-            quotient = (double) number1 / number2;
-            // Отображение результатов
-            System.out.println("Сумма: " + sum);
-            System.out.println("Разность: " + difference);
-            System.out.println("Произведение: " + product);
-            System.out.println("Частное: " + quotient);
+        String path = "C:\\Users\\OLEG\\IdeaProjects\\Netology\\src\\AccessLogParser\\Logs\\access.log"; // Путь к файлу
+
+        File file = new File(path);
+
+        // Проверка существования и типа файла
+        if (!file.exists()) {
+            System.out.println("Файл не существует: " + path);
+            return;
         }
-        System.out.println("Введите текст и нажмите <Enter>: ");
-        String text = new Scanner(System.in) .nextLine();
-        System.out.println("Длина текста: " + text.length());
-        int fileCounter = 0; // Переменная для подсчета указанных файлов
 
-        while (true) { // Бесконечный цикл
-            // Путь к файлу
-            System.out.println("Please enter the file path: ");
-            String path = new Scanner(System.in).nextLine(); // Путь с консоли
+        if (!file.isFile()) {
+            System.out.println("Указанный путь не является файлом: " + path);
+            return;
+        }
 
-            // Создание объекта File на основе указанного пути
-            File file = new File(path);
+        // Инициализация переменных для подсчета строк и длины
+        int lineCount = 0;
+        int maxLength = 0;
+        int minLength = Integer.MAX_VALUE;
 
-            // Проверка, существует ли файл и является ли это директорией
-            boolean fileExists = file.exists();
-            boolean isDirectory = file.isDirectory();
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
 
-            // Если файл не существует или путь указывает на директорию, цикл продолжается
-            if (!fileExists) {
-                System.out.println("The file does not exist.");
-                continue; // Продолжение цикла
-            } else if (isDirectory) {
-                System.out.println("The path points to a directory, not a file.");
-                continue; // Продолжение цикла
+            // Построчное чтение файла
+            while ((line = reader.readLine()) != null) {
+                lineCount++; // Увеличение счетчика строк
+
+                int length = line.length();
+
+                // Проверка на максимальную допустимую длину строки
+                if (length > 1024) {
+                    throw new LineTooLongException("Строка номер " + lineCount + " превышает допустимую длину (1024 символа)");
+                }
+
+                if (length > maxLength) {
+                    maxLength = length; // Обновление максимальной длины строки
+                }
+                if (length < minLength) {
+                    minLength = length; // Обновление минимальной длины строки
+                }
             }
 
-            // Если это существующий файл, счетчик увеливиется и выводит информацию
-            fileCounter++; // Увеличение счетчика верно указанных файлов
-            System.out.println("Путь указан верно");
-            System.out.println("Это файл номер " + fileCounter);
-
-            // Условие выхода из программы
-            System.out.println("Do you want to exit? (yes/no): ");
-            String answer = new Scanner(System.in).nextLine();
-            if (answer.equalsIgnoreCase("yes")) {
-                break; // Выход из бесконечного цикла
+            // Если файл пустой, установка минимальной длины в 0
+            if (lineCount == 0) {
+                minLength = 0;
             }
+
+            // Вывод результатов
+            System.out.println("Общее количество строк в файле: " + lineCount);
+            System.out.println("Длина самой длинной строки: " + maxLength);
+            System.out.println("Длина самой короткой строки: " + minLength);
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } catch (LineTooLongException ex) {
+            System.err.println(ex.getMessage());
         }
     }
 }
