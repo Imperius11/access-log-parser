@@ -1,70 +1,85 @@
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 
-// Класс собственного исключения
-class LineTooLongException extends RuntimeException {
-    public LineTooLongException(String message) {
-        super(message);
-    }
-}
+class LogParser {
 
-class FileLineReader {
     public static void main(String[] args) {
-        String path = "C:\\Users\\OLEG\\IdeaProjects\\Netology\\src\\AccessLogParser\\Logs\\access.log"; // Путь к файлу
-
+        String path = "C:\\\\Users\\\\OLEG\\\\IdeaProjects\\\\Netology\\\\src\\\\AccessLogParser\\\\Logs\\\\access.log"; // Укажите путь к вашему лог-файлу
         File file = new File(path);
 
-        // Проверка существования и типа файла
-        if (!file.exists()) {
-            System.out.println("Файл не существует: " + path);
+        if (!file.exists() || !file.isFile()) {
+            System.out.println("Файл не существует или указан путь к папке.");
             return;
         }
 
-        if (!file.isFile()) {
-            System.out.println("Указанный путь не является файлом: " + path);
-            return;
-        }
-
-        // Инициализация переменных для подсчета строк и длины
-        int lineCount = 0;
-        int maxLength = 0;
-        int minLength = Integer.MAX_VALUE;
+        int totalRequests = 0;
+        int googleBotCount = 0;
+        int yandexBotCount = 0;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
-
-            // Построчное чтение файла
             while ((line = reader.readLine()) != null) {
-                lineCount++; // Увеличение счетчика строк
-
-                int length = line.length();
-
-                // Проверка на максимальную допустимую длину строки
-                if (length > 1024) {
-                    throw new LineTooLongException("Строка номер " + lineCount + " превышает допустимую длину (1024 символа)");
-                }
-
-                if (length > maxLength) {
-                    maxLength = length; // Обновление максимальной длины строки
-                }
-                if (length < minLength) {
-                    minLength = length; // Обновление минимальной длины строки
+                totalRequests++;
+                int botType = parseLogLine(line);
+                if (botType == 1) {
+                    googleBotCount++;
+                } else if (botType == 2) {
+                    yandexBotCount++;
                 }
             }
 
-            // Если файл пустой, установка минимальной длины в 0
-            if (lineCount == 0) {
-                minLength = 0;
-            }
+            // Вывод долей запросов от Googlebot и YandexBot
+            System.out.println("Общее количество запросов: " + totalRequests);
+            System.out.println("Количество запросов от Googlebot: " + googleBotCount);
+            System.out.println("Количество запросов от YandexBot: " + yandexBotCount);
+            System.out.printf("Доля запросов от Googlebot: %.2f%%%n", (googleBotCount * 100.0) / totalRequests);
+            System.out.printf("Доля запросов от YandexBot: %.2f%%%n", (yandexBotCount * 100.0) / totalRequests);
 
-            // Вывод результатов
-            System.out.println("Общее количество строк в файле: " + lineCount);
-            System.out.println("Длина самой длинной строки: " + maxLength);
-            System.out.println("Длина самой короткой строки: " + minLength);
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } catch (LineTooLongException ex) {
-            System.err.println(ex.getMessage());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+    }
+
+    /**
+     * Метод для парсинга строки лога и определения типа бота.
+     * @param line строка лога
+     * @return 1 для Googlebot, 2 для YandexBot, 0 если это не бот
+     */
+    public static int parseLogLine(String line) {
+        try {
+            // Извлечение User-Agent
+            int userAgentStart = line.indexOf('"', line.lastIndexOf('"') - 1) + 1;
+            int userAgentEnd = line.indexOf('"', userAgentStart);
+            String userAgent = line.substring(userAgentStart, userAgentEnd);
+
+            // Обработка User-Agent
+            int firstBracketStart = userAgent.indexOf('(');
+            int firstBracketEnd = userAgent.indexOf(')');
+            if (firstBracketStart != -1 && firstBracketEnd != -1) {
+                String firstBrackets = userAgent.substring(firstBracketStart + 1, firstBracketEnd);
+                String[] userAgentParts = firstBrackets.split(";");
+
+                if (userAgentParts.length >= 2) {
+                    String secondFragment = userAgentParts[1].trim();
+
+                    // Отделяем часть до слэша и проверяем на Googlebot или YandexBot
+                    int slashIndex = secondFragment.indexOf('/');
+                    String botName = (slashIndex != -1) ? secondFragment.substring(0, slashIndex) : secondFragment;
+
+                    // Возвращаем 1 для Googlebot, 2 для YandexBot, 0 если не бот
+                    if (botName.equals("Googlebot")) {
+                        return 1;  // Googlebot
+                    } else if (botName.equals("YandexBot")) {
+                        return 2; // YandexBot
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка при разборе строки: " + line);
+            e.printStackTrace();
+        }
+        return 0; // Не бот
     }
 }
