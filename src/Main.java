@@ -64,11 +64,11 @@ class LogParser {
                 if (userAgentParts.length >= 2) {
                     String secondFragment = userAgentParts[1].trim();
 
-                    // Отделяем часть до слэша и проверяем на Googlebot или YandexBot
+                    // Отделение части до слэша и проверка на Googlebot или YandexBot
                     int slashIndex = secondFragment.indexOf('/');
                     String botName = (slashIndex != -1) ? secondFragment.substring(0, slashIndex) : secondFragment;
 
-                    // Возвращаем 1 для Googlebot, 2 для YandexBot, 0 если не бот
+                    // Возвращение 1 для Googlebot, 2 для YandexBot, 0 если не бот
                     if (botName.equals("Googlebot")) {
                         return 1;  // Googlebot
                     } else if (botName.equals("YandexBot")) {
