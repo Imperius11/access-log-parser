@@ -1,60 +1,49 @@
-import java.time.LocalDateTime;
-import java.time.Duration;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class Statistics {
-    // Поля класса
-    private int totalTraffic;
-    private LocalDateTime minTime;
-    private LocalDateTime maxTime;
-    
-    // Конструктор без параметров
-    public Statistics() {
-        this.totalTraffic = 0;
-        this.minTime = null;
-        this.maxTime = null;
-    }
-    
-    // Метод для добавления записи лог-файла
+
+    private int totalTraffic = 0;
+    private HashSet<String> pages = new HashSet<>();  // Уникальные страницы с кодом ответа 200
+    private HashMap<String, Integer> osCount = new HashMap<>(); // Частота каждой ОС
+
+    // Метод для добавления записи
     public void addEntry(LogEntry entry) {
-        int entryTraffic = entry.getTraffic(); // Получаем объём данных из записи
-        LocalDateTime entryTime = entry.getRequestTime(); // Получаем время запроса
-        
-        // Добавляем трафик в общий счётчик
-        totalTraffic += entryTraffic;
+        // Учитываем трафик
+        totalTraffic += entry.getTraffic();
 
-        // Обновляем minTime и maxTime
-        if (minTime == null || entryTime.isBefore(minTime)) {
-            minTime = entryTime;
+        // Если код ответа 200, добавляем страницу в список существующих
+        if (entry.getResponseCode() == 200) {
+            pages.add(entry.getRequestPath());
         }
-        if (maxTime == null || entryTime.isAfter(maxTime)) {
-            maxTime = entryTime;
+
+        // Получаем информацию об операционной системе пользователя
+        String os = entry.getUserAgent().getOperatingSystem();
+
+        // Обновляем счетчик операционных систем
+        osCount.put(os, osCount.getOrDefault(os, 0) + 1);
+    }
+
+    // Метод для получения всех существующих страниц с кодом ответа 200
+    public List<String> getAllPages() {
+        return new ArrayList<>(pages); // Возвращаем список страниц
+    }
+
+    // Метод для получения статистики операционных систем (доля от общего числа)
+    public HashMap<String, Double> getOperatingSystemStatistics() {
+        HashMap<String, Double> osStatistics = new HashMap<>();
+        int totalOsCount = osCount.values().stream().mapToInt(Integer::intValue).sum();
+
+        for (Map.Entry<String, Integer> entry : osCount.entrySet()) {
+            String os = entry.getKey();
+            int count = entry.getValue();
+            double percentage = (double) count / totalOsCount;
+            osStatistics.put(os, percentage);
         }
-    }
-    
-    // Метод для вычисления средней скорости трафика за час
-    public double getTrafficRate() {
-        // Проверяем, что у нас есть минимум и максимум времени
-        if (minTime == null || maxTime == null || minTime.equals(maxTime)) {
-            return 0; // Возвращаем 0, если недостаточно данных для расчёта
-        }
-        
-        // Вычисляем разницу во времени в часах
-        long hours = Duration.between(minTime, maxTime).toHours();
-        
-        // Рассчитываем среднюю скорость трафика за час
-        return (double) totalTraffic / hours;
-    }
 
-    // Геттеры для проверки значений (при необходимости)
-    public int getTotalTraffic() {
-        return totalTraffic;
-    }
-
-    public LocalDateTime getMinTime() {
-        return minTime;
-    }
-
-    public LocalDateTime getMaxTime() {
-        return maxTime;
+        return osStatistics;
     }
 }
