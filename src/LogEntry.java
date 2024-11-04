@@ -45,6 +45,8 @@ public class LogEntry {
     public String getUserAgent() {
         return userAgent;
     }
-
+    public String getReferer() {
+        return referer;
+    }
     // Другие геттеры
 }

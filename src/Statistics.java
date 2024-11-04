@@ -1,79 +1,75 @@
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 public class Statistics {
-    // Поля для статистики
-    private int totalVisits = 0; // Общее количество визитов
-    private int realUserVisits = 0; // Количество визитов реальными пользователями (не ботами)
-    private int errorRequests = 0; // Количество запросов с ошибочным кодом ответа
-    private int totalTraffic = 0; // Общий трафик
-    private LocalDateTime minTime = null; // Время самого раннего запроса
-    private LocalDateTime maxTime = null; // Время самого позднего запроса
-    private HashSet<String> uniqueRealUserIPs = new HashSet<>(); // Уникальные IP-адреса реальных пользователей (не ботов)
 
-    public Statistics() {
-        // Конструктор по умолчанию
-    }
+    private HashMap<Integer, Integer> visitsPerSecond = new HashMap<>(); // Для пиковой посещаемости
+    private HashSet<String> referrerDomains = new HashSet<>(); // Для доменов referer
+    private HashMap<String, Integer> userVisits = new HashMap<>(); // Для максимальной посещаемости одним пользователем
 
+    // Метод для добавления записей логов (предполагается, что это добавлено в addEntry)
     public void addEntry(LogEntry entry) {
-        // Обновление общего количества посещений
-        totalVisits++;
+        String userAgent = entry.getUserAgent().toLowerCase();
 
-        // Устанавка минимального и максимального времени запроса
-        LocalDateTime entryTime = entry.getDateTime();
-        if (minTime == null || entryTime.isBefore(minTime)) {
-            minTime = entryTime;
-        }
-        if (maxTime == null || entryTime.isAfter(maxTime)) {
-            maxTime = entryTime;
-        }
+        // Исключаем ботов
+        if (userAgent.contains("bot")) return;
 
-        // Учет трафика
-        totalTraffic += entry.getTraffic();
+        // Фиксируем посещение по секундам для расчета пиковой посещаемости
+        LocalDateTime dateTime = entry.getDateTime();
+        int secondOfDay = dateTime.toLocalTime().toSecondOfDay();
+        visitsPerSecond.put(secondOfDay, visitsPerSecond.getOrDefault(secondOfDay, 0) + 1);
 
-        // Проверка на бота
-        boolean isBot = entry.getUserAgent().toLowerCase().contains("bot");
-
-        // Обработка реальных пользователей
-        if (!isBot) {
-            realUserVisits++;
-            uniqueRealUserIPs.add(entry.getIpAddress());
+        // Сохраняем уникальные домены из referer
+        String referer = entry.getReferer();
+        if (referer != null && !referer.isEmpty()) {
+            String domain = extractDomain(referer);
+            if (domain != null) {
+                referrerDomains.add(domain);
+            }
         }
 
-        // Проверка на ошибочный код ответа
-        int responseCode = entry.getResponseCode();
-        if (responseCode >= 400 && responseCode < 600) {
-            errorRequests++;
-        }
+        // Считаем посещения для каждого пользователя (по IP)
+        String ipAddress = entry.getIpAddress();
+        userVisits.put(ipAddress, userVisits.getOrDefault(ipAddress, 0) + 1);
     }
 
-    // Метод подсчёта среднего количества посещений сайта за час (только для реальных пользователей)
-    public double getAverageVisitsPerHour() {
-        if (minTime == null || maxTime == null || realUserVisits == 0) {
-            return 0;
+    // Метод расчёта пиковой посещаемости сайта в секунду
+    public int getPeakVisitsPerSecond() {
+        int maxVisits = 0;
+        for (int visits : visitsPerSecond.values()) {
+            if (visits > maxVisits) {
+                maxVisits = visits;
+            }
         }
-        long hours = ChronoUnit.HOURS.between(minTime, maxTime);
-        if (hours == 0) hours = 1; // Чтобы избежать деления на ноль, если время очень короткое
-        return (double) realUserVisits / hours;
+        return maxVisits;
     }
 
-    // Метод подсчёта среднего количества ошибочных запросов в час
-    public double getAverageErrorRequestsPerHour() {
-        if (minTime == null || maxTime == null || errorRequests == 0) {
-            return 0;
-        }
-        long hours = ChronoUnit.HOURS.between(minTime, maxTime);
-        if (hours == 0) hours = 1; // Чтобы избежать деления на ноль
-        return (double) errorRequests / hours;
+    // Метод возвращающий список доменов, которые ссылаются на текущий сайт
+    public HashSet<String> getReferrerDomains() {
+        return new HashSet<>(referrerDomains);
     }
 
-    // Метод расчёта средней посещаемости одним пользователем (реальные пользователи)
-    public double getAverageVisitsPerRealUser() {
-        if (uniqueRealUserIPs.isEmpty()) {
-            return 0;
+    // Метод расчёта максимальной посещаемости одним пользователем
+    public int getMaxVisitsPerUser() {
+        int maxVisits = 0;
+        for (int visits : userVisits.values()) {
+            if (visits > maxVisits) {
+                maxVisits = visits;
+            }
         }
-        return (double) realUserVisits / uniqueRealUserIPs.size();
+        return maxVisits;
+    }
+
+    // Вспомогательный метод для извлечения домена из URL referer
+    private String extractDomain(String url) {
+        try {
+            String domain = url.replaceFirst("^(https?://)?(www\\.)?", "");
+            domain = domain.split("/")[0]; // Оставляем только доменное имя
+            return domain;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
