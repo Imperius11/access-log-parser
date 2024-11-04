@@ -7,43 +7,49 @@ import java.util.Map;
 public class Statistics {
 
     private int totalTraffic = 0;
-    private HashSet<String> pages = new HashSet<>();  // Уникальные страницы с кодом ответа 200
-    private HashMap<String, Integer> osCount = new HashMap<>(); // Частота каждой ОС
+    private HashSet<String> pages = new HashSet<>();          // Уникальные существующие страницы (код 200)
+    private HashSet<String> missingPages = new HashSet<>();    // Уникальные несуществующие страницы (код 404)
+    private HashMap<String, Integer> osCount = new HashMap<>(); // Частота операционных систем
+    private HashMap<String, Integer> browserCount = new HashMap<>(); // Частота браузеров
 
     // Метод для добавления записи
     public void addEntry(LogEntry entry) {
         // Учитываем трафик
         totalTraffic += entry.getTraffic();
 
-        // Если код ответа 200, добавляем страницу в список существующих
+        // Обрабатываем статус-код ответа
         if (entry.getResponseCode() == 200) {
-            pages.add(entry.getRequestPath());
+            pages.add(entry.getRequestPath()); // Добавляем существующую страницу
+        } else if (entry.getResponseCode() == 404) {
+            missingPages.add(entry.getRequestPath()); // Добавляем несуществующую страницу
         }
 
         // Получаем информацию об операционной системе пользователя
         String os = entry.getUserAgent().getOperatingSystem();
+        osCount.put(os, osCount.getOrDefault(os, 0) + 1); // Обновляем счетчик для ОС
 
-        // Обновляем счетчик операционных систем
-        osCount.put(os, osCount.getOrDefault(os, 0) + 1);
+        // Получаем информацию о браузере пользователя
+        String browser = entry.getUserAgent().getBrowser();
+        browserCount.put(browser, browserCount.getOrDefault(browser, 0) + 1); // Обновляем счетчик для браузера
     }
 
-    // Метод для получения всех существующих страниц с кодом ответа 200
-    public List<String> getAllPages() {
-        return new ArrayList<>(pages); // Возвращаем список страниц
+    // Метод для получения всех несуществующих страниц с кодом ответа 404
+    public List<String> getMissingPages() {
+        return new ArrayList<>(missingPages); // Возвращаем список несуществующих страниц
     }
 
-    // Метод для получения статистики операционных систем (доля от общего числа)
-    public HashMap<String, Double> getOperatingSystemStatistics() {
-        HashMap<String, Double> osStatistics = new HashMap<>();
-        int totalOsCount = osCount.values().stream().mapToInt(Integer::intValue).sum();
+    // Метод для получения статистики по браузерам (доля каждого браузера от общего числа)
+    public HashMap<String, Double> getBrowserStatistics() {
+        HashMap<String, Double> browserStatistics = new HashMap<>();
+        int totalBrowserCount = browserCount.values().stream().mapToInt(Integer::intValue).sum();
 
-        for (Map.Entry<String, Integer> entry : osCount.entrySet()) {
-            String os = entry.getKey();
+        for (Map.Entry<String, Integer> entry : browserCount.entrySet()) {
+            String browser = entry.getKey();
             int count = entry.getValue();
-            double percentage = (double) count / totalOsCount;
-            osStatistics.put(os, percentage);
+            double percentage = (double) count / totalBrowserCount;
+            browserStatistics.put(browser, percentage);
         }
 
-        return osStatistics;
+        return browserStatistics;
     }
 }
