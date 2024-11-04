@@ -1,55 +1,79 @@
-import java.util.HashSet;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.HashSet;
 
 public class Statistics {
+    // Поля для статистики
+    private int totalVisits = 0; // Общее количество визитов
+    private int realUserVisits = 0; // Количество визитов реальными пользователями (не ботами)
+    private int errorRequests = 0; // Количество запросов с ошибочным кодом ответа
+    private int totalTraffic = 0; // Общий трафик
+    private LocalDateTime minTime = null; // Время самого раннего запроса
+    private LocalDateTime maxTime = null; // Время самого позднего запроса
+    private HashSet<String> uniqueRealUserIPs = new HashSet<>(); // Уникальные IP-адреса реальных пользователей (не ботов)
 
-    private int totalTraffic = 0;
-    private HashSet<String> pages = new HashSet<>();          // Уникальные существующие страницы (код 200)
-    private HashSet<String> missingPages = new HashSet<>();    // Уникальные несуществующие страницы (код 404)
-    private HashMap<String, Integer> osCount = new HashMap<>(); // Частота операционных систем
-    private HashMap<String, Integer> browserCount = new HashMap<>(); // Частота браузеров
+    public Statistics() {
+        // Конструктор по умолчанию
+    }
 
-    // Метод для добавления записи
     public void addEntry(LogEntry entry) {
-        // Учитываем трафик
+        // Обновление общего количества посещений
+        totalVisits++;
+
+        // Устанавка минимального и максимального времени запроса
+        LocalDateTime entryTime = entry.getDateTime();
+        if (minTime == null || entryTime.isBefore(minTime)) {
+            minTime = entryTime;
+        }
+        if (maxTime == null || entryTime.isAfter(maxTime)) {
+            maxTime = entryTime;
+        }
+
+        // Учет трафика
         totalTraffic += entry.getTraffic();
 
-        // Обрабатываем статус-код ответа
-        if (entry.getResponseCode() == 200) {
-            pages.add(entry.getRequestPath()); // Добавляем существующую страницу
-        } else if (entry.getResponseCode() == 404) {
-            missingPages.add(entry.getRequestPath()); // Добавляем несуществующую страницу
+        // Проверка на бота
+        boolean isBot = entry.getUserAgent().toLowerCase().contains("bot");
+
+        // Обработка реальных пользователей
+        if (!isBot) {
+            realUserVisits++;
+            uniqueRealUserIPs.add(entry.getIpAddress());
         }
 
-        // Получаем информацию об операционной системе пользователя
-        String os = entry.getUserAgent().getOperatingSystem();
-        osCount.put(os, osCount.getOrDefault(os, 0) + 1); // Обновляем счетчик для ОС
-
-        // Получаем информацию о браузере пользователя
-        String browser = entry.getUserAgent().getBrowser();
-        browserCount.put(browser, browserCount.getOrDefault(browser, 0) + 1); // Обновляем счетчик для браузера
-    }
-
-    // Метод для получения всех несуществующих страниц с кодом ответа 404
-    public List<String> getMissingPages() {
-        return new ArrayList<>(missingPages); // Возвращаем список несуществующих страниц
-    }
-
-    // Метод для получения статистики по браузерам (доля каждого браузера от общего числа)
-    public HashMap<String, Double> getBrowserStatistics() {
-        HashMap<String, Double> browserStatistics = new HashMap<>();
-        int totalBrowserCount = browserCount.values().stream().mapToInt(Integer::intValue).sum();
-
-        for (Map.Entry<String, Integer> entry : browserCount.entrySet()) {
-            String browser = entry.getKey();
-            int count = entry.getValue();
-            double percentage = (double) count / totalBrowserCount;
-            browserStatistics.put(browser, percentage);
+        // Проверка на ошибочный код ответа
+        int responseCode = entry.getResponseCode();
+        if (responseCode >= 400 && responseCode < 600) {
+            errorRequests++;
         }
+    }
 
-        return browserStatistics;
+    // Метод подсчёта среднего количества посещений сайта за час (только для реальных пользователей)
+    public double getAverageVisitsPerHour() {
+        if (minTime == null || maxTime == null || realUserVisits == 0) {
+            return 0;
+        }
+        long hours = ChronoUnit.HOURS.between(minTime, maxTime);
+        if (hours == 0) hours = 1; // Чтобы избежать деления на ноль, если время очень короткое
+        return (double) realUserVisits / hours;
+    }
+
+    // Метод подсчёта среднего количества ошибочных запросов в час
+    public double getAverageErrorRequestsPerHour() {
+        if (minTime == null || maxTime == null || errorRequests == 0) {
+            return 0;
+        }
+        long hours = ChronoUnit.HOURS.between(minTime, maxTime);
+        if (hours == 0) hours = 1; // Чтобы избежать деления на ноль
+        return (double) errorRequests / hours;
+    }
+
+    // Метод расчёта средней посещаемости одним пользователем (реальные пользователи)
+    public double getAverageVisitsPerRealUser() {
+        if (uniqueRealUserIPs.isEmpty()) {
+            return 0;
+        }
+        return (double) realUserVisits / uniqueRealUserIPs.size();
     }
 }

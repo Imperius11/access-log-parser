@@ -2,66 +2,49 @@ import java.time.LocalDateTime;
 
 public class LogEntry {
     private final String ipAddress;
-    private final LocalDateTime requestTime;
-    private final HttpMethod httpMethod;
+    private final LocalDateTime dateTime; // Дата и время запроса
+    private final String httpMethod;
     private final String requestPath;
     private final int responseCode;
-    private final int responseSize; // Поле для объёма данных
+    private final int traffic;
     private final String referer;
-    private final UserAgent userAgent;
+    private final String userAgent;
 
-    // Конструктор
-    public LogEntry(String ipAddress, LocalDateTime requestTime, HttpMethod httpMethod,
-                    String requestPath, int responseCode, int responseSize,
-                    String referer, String userAgentString) {
+    // Конструктор класса LogEntry
+    public LogEntry(String ipAddress, LocalDateTime dateTime, String httpMethod,
+                    String requestPath, int responseCode, int traffic,
+                    String referer, String userAgent) {
         this.ipAddress = ipAddress;
-        this.requestTime = requestTime;
+        this.dateTime = dateTime;
         this.httpMethod = httpMethod;
         this.requestPath = requestPath;
         this.responseCode = responseCode;
-        this.responseSize = responseSize; // Инициализация поля
+        this.traffic = traffic;
         this.referer = referer;
-        this.userAgent = new UserAgent(userAgentString);
+        this.userAgent = userAgent;
     }
-    // Создайте enum для HTTP-методов
-    public enum HttpMethod {
-        GET,
-        POST,
-        PUT,
-        DELETE,
-        // Добавьте другие HTTP-методы по необходимости
+
+    // Геттер для dateTime
+    public LocalDateTime getDateTime() {
+        return dateTime;
     }
-    // Геттеры для всех полей
+
+    // Остальные геттеры, например:
     public String getIpAddress() {
         return ipAddress;
-    }
-
-    public LocalDateTime getRequestTime() {
-        return requestTime;
-    }
-
-    public HttpMethod getHttpMethod() {
-        return httpMethod;
-    }
-
-    public String getRequestPath() {
-        return requestPath;
     }
 
     public int getResponseCode() {
         return responseCode;
     }
 
-    // Метод getTraffic, который возвращает размер данных
     public int getTraffic() {
-        return responseSize;
+        return traffic;
     }
 
-    public String getReferer() {
-        return referer;
-    }
-
-    public UserAgent getUserAgent() {
+    public String getUserAgent() {
         return userAgent;
     }
+
+    // Другие геттеры
 }
